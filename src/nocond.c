@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <string.h>
 #include "fifo.h"
 
 void* most(void* ptr);
@@ -10,15 +11,30 @@ void* most(void* ptr);
 node_t* Aqueue = NULL;
 node_t* Bqueue = NULL;
 
+int debug = 0;
+
 pthread_mutex_t bridgeMutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char *argv[]) {
-        if(argc != 2) {
-                printf("Zle podane parametry, format: '%s <N>'\n", argv[0]);
+        int carCount = 0;
+
+        if(argc == 2) {
+                carCount = atoi(argv[1]);
+        }
+        else if(argc == 3) {
+                carCount = atoi(argv[1]);
+                if(strcmp(argv[2], "-debug") == 0) {
+                        debug = 1;
+                }
+                else {
+                        fprintf(stderr, "Zly format wejscia - Poprawny: %s <N> (-debug)\n", argv[0]);
+                        exit(EXIT_FAILURE);
+                }
+        }
+        else {
+                fprintf(stderr, "Zly format wejscia - Poprawny: %s <N> (-debug)\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
-
-        int carCount = atoi(argv[1]);
 
         pthread_t cars[carCount];
         int carNumbers[carCount];
@@ -35,10 +51,6 @@ int main(int argc, char *argv[]) {
                         enqueue(&Bqueue, carNumbers[i]);
                 }
         }
-        queue_print(Aqueue);
-        queue_print(Bqueue);
-        printf("Koniec kolejki: %d\n", queue_tail(Aqueue));
-        printf("Koniec kolejki: %d\n", queue_tail(Bqueue));
 
 
         int iret1;
@@ -70,12 +82,26 @@ void* most(void* ptr) {
                                 randomTime = rand() % 1000000 + 200000;
                                 usleep(randomTime);
 
-                                printf("A-%d %d>>> [>> %d >>] <<<%d %d-B\n",
-                                       queue_length(Aqueue),
-                                       queue_tail(Aqueue),
-                                       carNumber,
-                                       queue_tail(Bqueue),
-                                       queue_length(Bqueue));
+                                if(debug == 1) {
+                                        printf("-----------------------------------------\n");
+                                        queue_print(Aqueue);
+                                        printf("A-%d %d>>> [>> %d >>] <<<%d %d-B\n",
+                                        queue_length(Aqueue),
+                                        queue_tail(Aqueue),
+                                        carNumber,
+                                        queue_tail(Bqueue),
+                                        queue_length(Bqueue));
+                                        queue_print(Bqueue);
+
+                                }
+                                else {
+                                        printf("A-%d %d>>> [>> %d >>] <<<%d %d-B\n",
+                                        queue_length(Aqueue),
+                                        queue_tail(Aqueue),
+                                        carNumber,
+                                        queue_tail(Bqueue),
+                                        queue_length(Bqueue));
+                                }
 
                                 dequeue(&Aqueue);
 
@@ -88,12 +114,26 @@ void* most(void* ptr) {
                                 randomTime = rand() % 1000000 + 200000;
                                 usleep(randomTime);
 
-                                printf("A-%d %d>>> [<< %d <<] <<<%d %d-B\n",
-                                       queue_length(Aqueue),
-                                       queue_tail(Aqueue),
-                                       carNumber,
-                                       queue_tail(Bqueue),
-                                       queue_length(Bqueue));
+                                if(debug == 1) {
+                                        printf("-----------------------------------------\n");
+                                        queue_print(Aqueue);
+                                        printf("A-%d %d>>> [<< %d <<] <<<%d %d-B\n",
+                                        queue_length(Aqueue),
+                                        queue_tail(Aqueue),
+                                        carNumber,
+                                        queue_tail(Bqueue),
+                                        queue_length(Bqueue));
+                                        queue_print(Bqueue);
+
+                                }
+                                else {
+                                        printf("A-%d %d>>> [<< %d <<] <<<%d %d-B\n",
+                                        queue_length(Aqueue),
+                                        queue_tail(Aqueue),
+                                        carNumber,
+                                        queue_tail(Bqueue),
+                                        queue_length(Bqueue));
+                                }
 
                                 dequeue(&Bqueue);
 

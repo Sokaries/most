@@ -20,6 +20,7 @@ void dequeue(node_t** head) {
         if((*head)->next == NULL) {
                 free(*head);
                 *head = NULL;
+                return;
         }
 
         node_t** current = head;
