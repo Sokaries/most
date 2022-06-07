@@ -60,7 +60,7 @@ int queue_length(node_t* head) {
 
 void queue_print(node_t* head) {
         while(head != NULL) {
-                printf("%d\n", head->car);
+                printf("%d ", head->car);
                 head = head->next;
         }
         printf("\n");

@@ -23,6 +23,7 @@ int cityCount[2] = {0, 0};
 pthread_mutex_t queueMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t bridgeMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t cityCountMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t terminalMutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char *argv[]) {
         if(argc != 2) {
@@ -50,11 +51,9 @@ int main(int argc, char *argv[]) {
         for (int i=0; i<carCount; i++) {
                 pthread_join(cars[i], NULL);
         }
-
 }
 
 void bridge(int carNumber, int* city, int* didCross) {
-
         pthread_mutex_lock(&queueMutex);
         int randomTime = 0;
         //Jezeli w kolejce A jest wiecej samochodow niz w kolejce B
@@ -133,9 +132,7 @@ void* car(void* ptr) {
         //Dodaj do licznika
         incCity(city);
 
-
         int randomTime = 0;
-
 
         while(1) {
                 if(didCross == 1) {

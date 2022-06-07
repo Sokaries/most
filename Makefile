@@ -42,7 +42,7 @@ $(BIN1): $(OBJECTS1)
 	$(CC) -pthread -o $@ $^
 
 $(BIN2): $(OBJECTS2)
-	$(CC) -o $@ $^
+	$(CC) -pthread -o $@ $^
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)/
 	$(CC) $(CFLAGS) -c -o $@ $<
