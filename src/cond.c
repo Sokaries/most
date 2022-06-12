@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <string.h>
 #include "fifo.h"
 
 #define Acity 0
@@ -15,20 +16,37 @@ void incCity(int city);
 void decCity(int city);
 void syncEnqueue(node_t** queue, int carNumber);
 void syncDequeue(node_t** queue);
+int checkIfFirst(int carNumber);
+void debug_print();
 
 node_t* Aqueue = NULL;
 node_t* Bqueue = NULL;
 int cityCount[2] = {0, 0};
+
+int bridgeInUse = 0;
+
+int debug = 0;
 
 pthread_mutex_t queueMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t bridgeMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t cityCountMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t terminalMutex = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_cond_t condVar = PTHREAD_COND_INITIALIZER;
+
 int main(int argc, char *argv[]) {
-        if(argc != 2) {
-                printf("Zle podane parametry, format: '%s <N>'\n", argv[0]);
+        if(argc != 2 && argc != 3) {
+                printf("AZle podane parametry, format: '%s <N> (-debug)'\n", argv[0]);
                 exit(EXIT_FAILURE);
+        }
+        else if(argc == 3) {
+                if(strcmp(argv[2], "-debug") == 0) {
+                        debug = 1;
+                }
+                else {
+                        printf("BZle podane parametry, format: '%s <N> (-debug)'\n", argv[0]);
+                        exit(EXIT_FAILURE);
+                }
         }
 
         int carCount = atoi(argv[1]);
@@ -54,6 +72,7 @@ int main(int argc, char *argv[]) {
 }
 
 void bridge(int carNumber, int* city, int* didCross) {
+        bridgeInUse = 1;
         pthread_mutex_lock(&queueMutex);
         int randomTime = 0;
         //Jezeli w kolejce A jest wiecej samochodow niz w kolejce B
@@ -80,10 +99,13 @@ void bridge(int carNumber, int* city, int* didCross) {
 
                         incCity(Bcity);
 
+                        bridgeInUse = 0;
+                        pthread_cond_signal(&condVar);
                         return;
                 } else {
-                        *didCross = 0;
                         pthread_mutex_unlock(&queueMutex);
+                        bridgeInUse = 0;
+                        pthread_cond_signal(&condVar);
                         return;
                 }
         }
@@ -110,10 +132,15 @@ void bridge(int carNumber, int* city, int* didCross) {
                         *didCross = 1;
 
                         incCity(Acity);
+
+                        bridgeInUse = 0;
+                        pthread_cond_signal(&condVar);
+
                         return;
                 } else {
-                        *didCross = 0;
                         pthread_mutex_unlock(&queueMutex);
+                        bridgeInUse = 0;
+                        pthread_cond_signal(&condVar);
                         return;
                 }
         }
@@ -137,7 +164,7 @@ void* car(void* ptr) {
         while(1) {
                 if(didCross == 1) {
                         //Wylicz czas zanim wejdziesz do kolejki przejazdu
-                        randomTime = rand() % 2000000 + 250000;
+                        randomTime = rand() % 4000000 + 750000;
                         usleep(randomTime);
 
                         if(city == Acity) {
@@ -148,35 +175,87 @@ void* car(void* ptr) {
                                 syncEnqueue(&Bqueue, carNumber);
                                 decCity(city);
                         }
+                        didCross = 0;
                 }
 
-                pthread_mutex_lock(&bridgeMutex);
-                bridge(carNumber, &city, &didCross);
-                pthread_mutex_unlock(&bridgeMutex);
+                if(checkIfFirst(carNumber) == -1) {
+                        continue;
+                }
+                else {
+                        pthread_mutex_lock(&bridgeMutex);
+                        while(bridgeInUse == 1) {
+                                pthread_cond_wait(&condVar, &bridgeMutex);
+                        }
+                        bridge(carNumber, &city, &didCross);
+                        pthread_mutex_unlock(&bridgeMutex);
+                }
         }
         return NULL;
+}
+
+int checkIfFirst(int carNumber) {
+        pthread_mutex_lock(&queueMutex);
+        int retVal = -1;
+        if(carNumber == queue_tail(Aqueue)) {
+                retVal = Acity;
+        }
+        else if(carNumber == queue_tail(Bqueue)) {
+                retVal = Bcity;
+        }
+        pthread_mutex_unlock(&queueMutex);
+        return retVal;
 }
 
 void syncEnqueue(node_t** queue, int carNumber) {
         pthread_mutex_lock(&queueMutex);
         enqueue(queue, carNumber);
         pthread_mutex_unlock(&queueMutex);
+        if(debug == 1) {
+                debug_print();
+        }
 }
 
 void syncDequeue(node_t** queue) {
         pthread_mutex_lock(&queueMutex);
         dequeue(queue);
         pthread_mutex_unlock(&queueMutex);
+        if(debug == 1) {
+                debug_print();
+        }
 }
 
 void incCity(int city) {
         pthread_mutex_lock(&cityCountMutex);
         cityCount[city]++;
         pthread_mutex_unlock(&cityCountMutex);
+        if(debug == 1) {
+                debug_print();
+        }
 }
 
 void decCity(int city) {
         pthread_mutex_lock(&cityCountMutex);
         cityCount[city]--;
         pthread_mutex_unlock(&cityCountMutex);
+        if(debug == 1) {
+                debug_print();
+        }
+}
+
+void debug_print() {
+        pthread_mutex_lock(&terminalMutex);
+        //Wypisz ilosci samochodow w miastach
+        pthread_mutex_lock(&cityCountMutex);
+        printf("Ilosc samochodow w miescie A: %d, w miescie B: %d\n", cityCount[Acity], cityCount[Bcity]);
+        pthread_mutex_unlock(&cityCountMutex);
+
+        pthread_mutex_lock(&queueMutex);
+        printf("Samochody w kolejce A: \n");
+        queue_print(Aqueue);
+        printf("Samochody w kolejce B: \n");
+        queue_print(Bqueue);
+        printf("\n");
+        pthread_mutex_unlock(&queueMutex);
+
+        pthread_mutex_unlock(&terminalMutex);
 }
