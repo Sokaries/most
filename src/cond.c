@@ -72,13 +72,13 @@ int main(int argc, char *argv[]) {
 }
 
 void bridge(int carNumber, int* city, int* didCross) {
+        pthread_mutex_lock(&terminalMutex);
         bridgeInUse = 1;
         pthread_mutex_lock(&queueMutex);
         int randomTime = 0;
         //Jezeli w kolejce A jest wiecej samochodow niz w kolejce B
         if(queue_length(Aqueue) >= queue_length(Bqueue)) {
                 if(queue_tail(Aqueue) == carNumber) {
-
                         pthread_mutex_lock(&cityCountMutex);
                         printf("A-%d %d>>> [>> %d >>] <<<%d %d-B\n",
                                cityCount[Acity],
@@ -86,6 +86,7 @@ void bridge(int carNumber, int* city, int* didCross) {
                                carNumber,
                                queue_length(Bqueue),
                                cityCount[Bcity]);
+                        pthread_mutex_unlock(&terminalMutex);
                         pthread_mutex_unlock(&cityCountMutex);
                         pthread_mutex_unlock(&queueMutex);
 
@@ -104,6 +105,7 @@ void bridge(int carNumber, int* city, int* didCross) {
                         return;
                 } else {
                         pthread_mutex_unlock(&queueMutex);
+                        pthread_mutex_unlock(&terminalMutex);
                         bridgeInUse = 0;
                         pthread_cond_signal(&condVar);
                         return;
@@ -120,6 +122,7 @@ void bridge(int carNumber, int* city, int* didCross) {
                                carNumber,
                                queue_length(Bqueue),
                                cityCount[Bcity]);
+                        pthread_mutex_unlock(&terminalMutex);
                         pthread_mutex_unlock(&cityCountMutex);
                         pthread_mutex_unlock(&queueMutex);
 
@@ -139,6 +142,7 @@ void bridge(int carNumber, int* city, int* didCross) {
                         return;
                 } else {
                         pthread_mutex_unlock(&queueMutex);
+                        pthread_mutex_unlock(&terminalMutex);
                         bridgeInUse = 0;
                         pthread_cond_signal(&condVar);
                         return;

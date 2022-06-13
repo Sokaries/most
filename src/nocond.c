@@ -68,23 +68,25 @@ int main(int argc, char *argv[]) {
 }
 
 void bridge(int carNumber, int* city, int* didCross) {
+        pthread_mutex_lock(&terminalMutex);
         pthread_mutex_lock(&queueMutex);
         int randomTime = 0;
         //Jezeli w kolejce A jest wiecej samochodow niz w kolejce B
         if(queue_length(Aqueue) >= queue_length(Bqueue)) {
                 if(queue_tail(Aqueue) == carNumber) {
-
                         pthread_mutex_lock(&cityCountMutex);
+
                         printf("A-%d %d>>> [>> %d >>] <<<%d %d-B\n",
                                cityCount[Acity],
                                queue_length(Aqueue),
                                carNumber,
                                queue_length(Bqueue),
                                cityCount[Bcity]);
+                        pthread_mutex_unlock(&terminalMutex);
                         pthread_mutex_unlock(&cityCountMutex);
                         pthread_mutex_unlock(&queueMutex);
 
-                        randomTime = rand() % 1000000 + 200000;
+                        randomTime = rand() % 10 + 20;
                         usleep(randomTime);
 
                         syncDequeue(&Aqueue);
@@ -98,6 +100,8 @@ void bridge(int carNumber, int* city, int* didCross) {
                 } else {
                         *didCross = 0;
                         pthread_mutex_unlock(&queueMutex);
+                        pthread_mutex_unlock(&terminalMutex);
+
                         return;
                 }
         }
@@ -112,10 +116,11 @@ void bridge(int carNumber, int* city, int* didCross) {
                                carNumber,
                                queue_length(Bqueue),
                                cityCount[Bcity]);
+                        pthread_mutex_unlock(&terminalMutex);
                         pthread_mutex_unlock(&cityCountMutex);
                         pthread_mutex_unlock(&queueMutex);
 
-                        randomTime = rand() % 2000000 + 500000;
+                        randomTime = rand() % 10 + 20;
                         usleep(randomTime);
 
                         syncDequeue(&Bqueue);
@@ -128,6 +133,7 @@ void bridge(int carNumber, int* city, int* didCross) {
                 } else {
                         *didCross = 0;
                         pthread_mutex_unlock(&queueMutex);
+                        pthread_mutex_unlock(&terminalMutex);
                         return;
                 }
         }
@@ -151,7 +157,7 @@ void* car(void* ptr) {
         while(1) {
                 if(didCross == 1) {
                         //Wylicz czas zanim wejdziesz do kolejki przejazdu
-                        randomTime = rand() % 2000000 + 250000;
+                        randomTime = rand() % 20 + 25;
                         usleep(randomTime);
 
                         if(city == Acity) {
